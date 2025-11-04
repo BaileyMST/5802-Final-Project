@@ -2,7 +2,6 @@ import numpy as np
 import matplotlib.pyplot as plt
 from PIL import Image
 import scipy.ndimage
-import scipy.ndimage.filters as filters
 import scipy.signal
 from matplotlib.patches import Circle
 
