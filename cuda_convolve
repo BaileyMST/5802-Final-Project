@@ -1,0 +1,108 @@
+import numpy as np
+import matplotlib.pyplot as plt
+from PIL import Image
+import scipy.ndimage
+import scipy.signal
+from matplotlib.patches import Circle
+
+def load_image(filepath):
+    """Loads an image into a numpy array.
+    Note: image will have 3 color channels [r, g, b]."""
+    img = Image.open(filepath)
+    return (np.asarray(img).astype(float)/255)[:, :, :3]
+
+def get_circ_image(image_size, radius):
+    """Create an image of width `image_size` with a circle 
+    of radius `radius` in its center."""
+    assert(image_size % 2 == 1)
+    h = (image_size + 1)//2
+    d = np.arange(h)
+    d = np.concatenate((d[::-1], d[1:]))
+    d = d[:, np.newaxis]
+    d_sq = d**2 + d.T ** 2
+    # Threshold by squared radius
+    d_sq = (d_sq <= radius**2).astype(float)
+    return d_sq
+
+def get_LoG_filter(kernel_size, sigma):
+    kernel = np.zeros((kernel_size, kernel_size))
+    for i in range(kernel_size):
+        for j in range(kernel_size):
+            x = i-kernel_size//2
+            y = j-kernel_size//2
+            front = (1/(np.pi*(sigma**4)))
+            mid = (1-(x**2+y**2)/(2*(sigma**2)))
+            back = np.exp(-(x**2+y**2)/(2*(sigma**2)))
+            kernel[i,j] = front*mid*back
+    kernel = kernel*sigma**2
+    return kernel
+
+def plot_circ_features(image, features, ax):
+    ax.imshow(image)
+    for m in features:
+        if len(m) == 0:
+            continue
+        x, y, sigma = m[0], m[1], m[2]
+        radius = sigma*np.sqrt(2)
+        cir = Circle((x, y), radius, color='r', fill=False, linewidth=1.5)
+        ax.add_artist(cir)
+
+def apply_filter(signal, filt):
+    """Apply a filter to an image; wrapper around scipy."""
+    return scipy.signal.convolve2d(signal, filt, mode='same')
+
+        
+def get_local_maxima_3D(data, threshold, sigmas, neighborhood_size=5):
+    # See: https://stackoverflow.com/a/9113227/3672986
+    data_region_max = scipy.ndimage.maximum_filter(data, neighborhood_size)
+    maxima = (data == data_region_max)
+    data_min = scipy.ndimage.minimum_filter(data, neighborhood_size)
+    maxima[data < threshold] = 0
+
+    labeled, num_objects = scipy.ndimage.label(maxima)
+    slices = scipy.ndimage.find_objects(labeled)
+
+    features = []
+    x, y = [], []
+    for dy, dx, dz in slices:
+        x_center = int(round((dx.start + dx.stop - 1)/2))
+        y_center = int(round((dy.start + dy.stop - 1)/2))
+        z_center = int(round((dz.start + dz.stop - 1)/2))
+        features.append((x_center, y_center, sigmas[z_center]))
+    return features
+    
+def compute_multi_scale_features(image, sigmas, threshold, window_size=11):
+    response = np.zeros((image.shape[0], image.shape[1], sigmas.size))
+    for i, sigma in enumerate(sigmas):
+        LoG_filter = get_LoG_filter(51, sigma) #Maxed for the sake of time (it was taking like two hours if I used int(6*sigma)+1). If you wish for the full results change it back, but be aware it will take a long time. Current settings take 5 minutes on my machine. 
+        #LoG_filter = get_LoG_filter(int(6*sigma)+1, sigma)
+        feature_response = apply_filter(image, LoG_filter)
+        response[:, :, i] = np.abs(feature_response)
+    features = get_local_maxima_3D(response, threshold, sigmas,window_size)
+    return features
+
+im_half_size = 25
+fig = plt.figure()
+sigmas = np.arange(2, 20, 0.1)
+circ_img_a = get_circ_image(2 * im_half_size + 1, radius=12)
+circ_img_b = -get_circ_image(2 * im_half_size + 1, radius=8) #Negated to show detection of dark blobs
+circ_img = np.concatenate([circ_img_a, circ_img_b], axis=1)
+plot_circ_features(circ_img, [], plt.gca())
+fig = plt.figure(figsize=(8, 8))
+features = compute_multi_scale_features(circ_img, sigmas, threshold=0.01)
+plot_circ_features(circ_img, features, plt.gca())
+plt.title("Detected Features")
+plt.savefig("Outputs/detected_features_circle_CUDA.png", dpi=300)
+img1 = load_image("Inputs/sunflower_field.jpg")[:, :, 0]
+fig = plt.figure(figsize=(8, 8))
+sigmas = np.arange(4,80,2)
+features = compute_multi_scale_features(img1, sigmas, threshold=0.05)
+plot_circ_features(img1, features, plt.gca())
+plt.title("Detected Features")
+plt.savefig("Outputs/detected_features_sunflower_CUDA.png", dpi=300)
+img2 = load_image("Inputs/hornet.jpg")[:, :, 0]
+fig = plt.figure(figsize=(8, 8))
+features = compute_multi_scale_features(img2, sigmas, threshold=0.05)
+plot_circ_features(img2, features, plt.gca())
+plt.title("Detected Features")
+plt.savefig("Outputs/detected_features_hornet_CUDA.png", dpi=300)
