@@ -74,8 +74,8 @@ def get_local_maxima_3D(data, threshold, sigmas, neighborhood_size=5):
 def compute_multi_scale_features(image, sigmas, threshold, window_size=11):
     response = np.zeros((image.shape[0], image.shape[1], sigmas.size))
     for i, sigma in enumerate(sigmas):
-        LoG_filter = get_LoG_filter(51, sigma) #Maxed for the sake of time (it was taking like two hours if I used int(6*sigma)+1). If you wish for the full results change it back, but be aware it will take a long time. Current settings take 5 minutes on my machine. 
-        #LoG_filter = get_LoG_filter(int(6*sigma)+1, sigma)
+        #LoG_filter = get_LoG_filter(51, sigma) 
+        LoG_filter = get_LoG_filter(int(6*sigma)+1, sigma) #WARNING: This line causes SIGNIFICANT increase in computation time for large sigma values. The commented line above can replace it for testing, however results will be suboptimal.
         feature_response = apply_filter(image, LoG_filter)
         response[:, :, i] = np.abs(feature_response)
     features = get_local_maxima_3D(response, threshold, sigmas,window_size)
