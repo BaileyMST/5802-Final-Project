@@ -6,4 +6,13 @@ convolve.py is the sequential version of the code. It is run with ```python conv
 mpi_convolve.py uses mpi4py to implement cpu-based parallelization. It is run with 
 ```mpirun -n {threads to run with} python mpi_convolve.py```
 
-cuda_convolve.py uses CUDA to implement GPU parallelization. It is run with ```insert run command here```
+GPU_convolve.py uses CUDA to implement GPU parallelization.
+The requirements for the script to run are not in requirements.txt due to the requirement being different based on the GPU the user has. For most Nvidia drivers ```pip install cupy-cuda12x```
+
+For official CuPy (CUDA) installation instructions, see:
+https://docs.cupy.dev/en/stable/install.html
+
+
+Once install you can run the script with ```python GPU_convolve.py```
+
+

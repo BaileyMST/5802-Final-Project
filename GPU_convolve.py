@@ -130,15 +130,10 @@ def compute_multi_scale_features_gpu(image_2d_cpu: np.ndarray, sigmas, threshold
 
 
 def cuda_barrier():
-    """Equivalent to MPI_Barrier for GPU: wait until all queued GPU work is finished."""
     cp.cuda.Stream.null.synchronize()
 
 
 def cuda_time_block(fn, *args, **kwargs):
-    """
-    Times a GPU workload accurately by syncing before and after.
-    Returns (result, elapsed_seconds).
-    """
     cuda_barrier()
     t0 = time.perf_counter()
     out = fn(*args, **kwargs)
