@@ -102,6 +102,10 @@ if not MPI.Is_initialized():
 comm = MPI.COMM_WORLD
 rank = comm.Get_rank()
 size = comm.Get_size()
+
+comm.Barrier()
+program_start = MPI.Wtime()
+
 if rank == 0:
     print(f"MPI initialized with {size} processes.")
 im_half_size = 25
@@ -112,26 +116,64 @@ circ_img_b = -get_circ_image(2 * im_half_size + 1, radius=8)
 circ_img = np.concatenate([circ_img_a, circ_img_b], axis=1)
 plot_circ_features(circ_img, [], plt.gca())
 fig = plt.figure(figsize=(8, 8))
+
+comm.Barrier()
+t0 = MPI.Wtime()
+
 features = compute_multi_scale_features(circ_img, sigmas, threshold=0.01)
+
+comm.Barrier()
+t1 = MPI.Wtime()
+compute_time = comm.reduce(t1 - t0, op=MPI.MAX, root=0)
+
 if rank == 0:
     plot_circ_features(circ_img, features, plt.gca())
     plt.title("Detected Features")
     plt.savefig("Outputs/detected_features_circle_mpi.png", dpi=300)
     print("Saved detected features for circle image.")
+    print(f"Compute-only time (circle): {compute_time:.6f} s")
 img1 = load_image("Inputs/sunflower_field.jpg")[:, :, 0]
 fig = plt.figure(figsize=(8, 8))
 sigmas = np.arange(4,80,2)
+
+comm.Barrier()
+t0 = MPI.Wtime()
+
 features = compute_multi_scale_features(img1, sigmas, threshold=0.05)
+
+comm.Barrier()
+t1 = MPI.Wtime()
+compute_time = comm.reduce(t1 - t0, op=MPI.MAX, root=0)
+
 if rank == 0:
     plot_circ_features(img1, features, plt.gca())
     plt.title("Detected Features")
     plt.savefig("Outputs/detected_features_sunflower_mpi.png", dpi=300)
     print("Saved detected features for sunflower image.")
+    print(f"Compute-only time (circle): {compute_time:.6f} s")
 img2 = load_image("Inputs/hornet.jpg")[:, :, 0]
 fig = plt.figure(figsize=(8, 8))
+
+comm.Barrier()
+t0 = MPI.Wtime()
+
 features = compute_multi_scale_features(img2, sigmas, threshold=0.05)
+
+comm.Barrier()
+t1 = MPI.Wtime()
+compute_time = comm.reduce(t1 - t0, op=MPI.MAX, root=0)
+
 if rank == 0:
     plot_circ_features(img2, features, plt.gca())
     plt.title("Detected Features")
     plt.savefig("Outputs/detected_features_hornet_mpi.png", dpi=300)
     print("Saved detected features for hornet image.")
+    print(f"Compute-only time (circle): {compute_time:.6f} s")
+
+comm.Barrier()
+program_end = MPI.Wtime()
+elapsed = program_end - program_start
+
+total_time = comm.reduce(elapsed, op=MPI.MAX, root=0)
+if rank == 0:
+    print(f"End-to-end MPI runtime: {total_time:.6f} seconds")
