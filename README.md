@@ -16,3 +16,6 @@ https://docs.cupy.dev/en/stable/install.html
 Once install you can run the script with ```python GPU_convolve.py```
 
 
+The SIMD ```SIMD_convolve.py``` can be ran with ```python SIMD_convolve.py``` but relies on NumPy vectorized operations to use CPU SIMD instructions. Since there are no explicit SIMD instructions (SSE/AVX) the usage and proper compilation can vary depending on your CPU. Assuming your CPU supports AVX you will see a dramatic speedup due to the Numpy SIMD operations.
+
+
