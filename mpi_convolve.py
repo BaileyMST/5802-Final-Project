@@ -6,11 +6,13 @@ import scipy.signal
 from matplotlib.patches import Circle
 import mpi4py.MPI as MPI
 
+
 def load_image(filepath):
     """Loads an image into a numpy array.
     Note: image will have 3 color channels [r, g, b]."""
     img = Image.open(filepath)
     return (np.asarray(img).astype(float)/255)[:, :, :3]
+
 
 def get_circ_image(image_size, radius):
     """Create an image of width `image_size` with a circle 
@@ -25,6 +27,7 @@ def get_circ_image(image_size, radius):
     d_sq = (d_sq <= radius**2).astype(float)
     return d_sq
 
+
 def get_LoG_filter(kernel_size, sigma):
     kernel = np.zeros((kernel_size, kernel_size))
     for i in range(kernel_size):
@@ -38,6 +41,7 @@ def get_LoG_filter(kernel_size, sigma):
     kernel = kernel*sigma**2
     return kernel
 
+
 def plot_circ_features(image, features, ax):
     ax.imshow(image)
     for m in features:
@@ -48,11 +52,12 @@ def plot_circ_features(image, features, ax):
         cir = Circle((x, y), radius, color='r', fill=False, linewidth=1.5)
         ax.add_artist(cir)
 
+
 def apply_filter(signal, filt):
     """Apply a filter to an image; wrapper around scipy."""
     return scipy.signal.convolve2d(signal, filt, mode='same')
 
-        
+       
 def get_local_maxima_3D(data, threshold, sigmas, neighborhood_size=5):
     # See: https://stackoverflow.com/a/9113227/3672986
     data_region_max = scipy.ndimage.maximum_filter(data, neighborhood_size)
@@ -71,7 +76,8 @@ def get_local_maxima_3D(data, threshold, sigmas, neighborhood_size=5):
         z_center = int(round((dz.start + dz.stop - 1)/2))
         features.append((x_center, y_center, sigmas[z_center]))
     return features
-    
+
+
 def compute_multi_scale_features(image, sigmas, threshold, window_size=11):
     response = np.zeros((image.shape[0], image.shape[1], sigmas.size))
     num_sigmas = len(sigmas)
@@ -96,6 +102,7 @@ def compute_multi_scale_features(image, sigmas, threshold, window_size=11):
         return features
     else:
         return None
+
 
 if not MPI.Is_initialized():
     MPI.Init()
