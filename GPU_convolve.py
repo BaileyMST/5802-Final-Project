@@ -55,10 +55,6 @@ def plot_circ_features(image, features, ax):
 
 
 def get_LoG_filter_gpu(kernel_size: int, sigma: float) -> cp.ndarray:
-    """
-    GPU LoG kernel generator matching your CPU get_LoG_filter() math.
-    Returns cp.float32 kernel of shape (ks, ks).
-    """
     ks = int(kernel_size)
     sig = float(sigma)
     c = ks // 2
@@ -96,7 +92,7 @@ def local_maxima_3d_gpu(response_gpu: cp.ndarray, threshold: float, sigmas_cpu: 
 
 def compute_multi_scale_features_gpu(image_2d_cpu: np.ndarray, sigmas, threshold: float, window_size: int = 11):
     if image_2d_cpu.ndim != 2:
-        raise ValueError("compute_multi_scale_features_gpu expects a single-channel 2D image.")
+        raise ValueError("single-channel 2D image expected")
 
     sigmas_cpu = np.asarray(sigmas, dtype=np.float32)
     H, W = image_2d_cpu.shape
@@ -112,22 +108,11 @@ def compute_multi_scale_features_gpu(image_2d_cpu: np.ndarray, sigmas, threshold
 
         LoG = get_LoG_filter_gpu(ksize, float(sigma))
 
-        conv = cpsig.convolve2d(
-            img_gpu, LoG,
-            mode="same",
-            boundary="fill",
-            fillvalue=0
-        )
+        conv = cpsig.convolve2d(img_gpu, LoG, mode="same", boundary="fill", fillvalue=0)
 
         response_gpu[:, :, i] = cp.abs(conv)
 
-    features = local_maxima_3d_gpu(
-        response_gpu,
-        threshold=threshold,
-        sigmas_cpu=sigmas_cpu,
-        neighborhood_size=window_size
-    )
-    return features
+    return local_maxima_3d_gpu(response_gpu, threshold=threshold, sigmas_cpu=sigmas_cpu, neighborhood_size=window_size)
 
 
 def cuda_barrier():
