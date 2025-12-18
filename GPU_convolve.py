@@ -11,14 +11,15 @@ import cupyx.scipy.signal as cpsig
 import cupyx.scipy.ndimage as cpxndi
 
 
-for sp in site.getsitepackages():
-    cand = os.path.join(sp, "cupy", ".data")
-    if os.path.isdir(cand):
-        # Walk to find a directory containing cublas*.dll
-        for root, dirs, files in os.walk(cand):
-            if any(f.lower().startswith("cublas") and f.lower().endswith(".dll") for f in files):
-                os.environ["PATH"] = root + os.pathsep + os.environ.get("PATH", "")
-                break
+# Uncomment the following block if you encounter DLL load issues on Windows for CuPy
+# for sp in site.getsitepackages():
+#     cand = os.path.join(sp, "cupy", ".data")
+#     if os.path.isdir(cand):
+#         # Walk to find a directory containing cublas*.dll
+#         for root, dirs, files in os.walk(cand):
+#             if any(f.lower().startswith("cublas") and f.lower().endswith(".dll") for f in files):
+#                 os.environ["PATH"] = root + os.pathsep + os.environ.get("PATH", "")
+#                 break
 
 
 def load_image(filepath):

@@ -4,6 +4,7 @@ from PIL import Image
 import scipy.ndimage
 import scipy.signal
 from matplotlib.patches import Circle
+import time
 
 def load_image(filepath):
     """Loads an image into a numpy array.
@@ -81,28 +82,53 @@ def compute_multi_scale_features(image, sigmas, threshold, window_size=11):
     features = get_local_maxima_3D(response, threshold, sigmas,window_size)
     return features
 
-im_half_size = 25
-fig = plt.figure()
-sigmas = np.arange(2, 20, 0.1)
-circ_img_a = get_circ_image(2 * im_half_size + 1, radius=12)
-circ_img_b = -get_circ_image(2 * im_half_size + 1, radius=8) #Negated to show detection of dark blobs
-circ_img = np.concatenate([circ_img_a, circ_img_b], axis=1)
-plot_circ_features(circ_img, [], plt.gca())
-fig = plt.figure(figsize=(8, 8))
-features = compute_multi_scale_features(circ_img, sigmas, threshold=0.01)
-plot_circ_features(circ_img, features, plt.gca())
-plt.title("Detected Features")
-plt.savefig("Outputs/detected_features_circle.png", dpi=300)
-img1 = load_image("Inputs/sunflower_field.jpg")[:, :, 0]
-fig = plt.figure(figsize=(8, 8))
-sigmas = np.arange(4,80,2)
-features = compute_multi_scale_features(img1, sigmas, threshold=0.05)
-plot_circ_features(img1, features, plt.gca())
-plt.title("Detected Features")
-plt.savefig("Outputs/detected_features_sunflower.png", dpi=300)
-img2 = load_image("Inputs/hornet.jpg")[:, :, 0]
-fig = plt.figure(figsize=(8, 8))
-features = compute_multi_scale_features(img2, sigmas, threshold=0.05)
-plot_circ_features(img2, features, plt.gca())
-plt.title("Detected Features")
-plt.savefig("Outputs/detected_features_hornet.png", dpi=300)
+def time_block(fn, *args, **kwargs):
+    t0 = time.perf_counter()
+    out = fn(*args, **kwargs)
+    t1 = time.perf_counter()
+    return out, (t1 - t0)
+
+
+def main():
+    program_start = time.perf_counter()
+
+    im_half_size = 25
+    fig = plt.figure()
+    sigmas = np.arange(2, 20, 0.1, dtype=np.float32)
+
+    circ_img_a = get_circ_image(2 * im_half_size + 1, radius=12)
+    circ_img_b = -get_circ_image(2 * im_half_size + 1, radius=8)
+    circ_img = np.concatenate([circ_img_a, circ_img_b], axis=1)
+
+    plot_circ_features(circ_img, [], plt.gca())
+
+    fig = plt.figure(figsize=(8, 8))
+    features, compute_time = time_block(compute_multi_scale_features, circ_img, sigmas, threshold=0.01)
+    plot_circ_features(circ_img, features, plt.gca())
+    plt.title("Detected Features")
+    plt.savefig("Outputs/detected_features_circle.png", dpi=300)
+    print(f"Compute-only time (img 0, CPU-vectorized): {compute_time:.6f} s")
+
+    img1 = load_image("Inputs/sunflower_field.jpg")[:, :, 0]
+    fig = plt.figure(figsize=(8, 8))
+    sigmas = np.arange(4, 80, 2, dtype=np.float32)
+    features, compute_time = time_block(compute_multi_scale_features, img1, sigmas, threshold=0.05)
+    plot_circ_features(img1, features, plt.gca())
+    plt.title("Detected Features")
+    plt.savefig("Outputs/detected_features_sunflower.png", dpi=300)
+    print(f"Compute-only time (img 1, CPU-vectorized): {compute_time:.6f} s")
+
+    img2 = load_image("Inputs/hornet.jpg")[:, :, 0]
+    fig = plt.figure(figsize=(8, 8))
+    features, compute_time = time_block(compute_multi_scale_features, img2, sigmas, threshold=0.05)
+    plot_circ_features(img2, features, plt.gca())
+    plt.title("Detected Features")
+    plt.savefig("Outputs/detected_features_hornet.png", dpi=300)
+    print(f"Compute-only time (img 2, CPU-vectorized): {compute_time:.6f} s")
+
+    program_end = time.perf_counter()
+    total_time = program_end - program_start
+    print(f"End-to-end CPU runtime: {total_time:.6f} seconds")
+
+if __name__ == "__main__":
+    main()
